@@ -34,6 +34,8 @@ class RegisterFile(implicit val conf: CPUConfig) extends Module {
 
   // *Always* read the data. This is required for the single cycle CPU since in a single cycle it
   // might both read and write the registers (e.g., an add)
-  io.readdata1 := regs(io.readreg1)
-  io.readdata2 := regs(io.readreg2)
+  //io.readdata1 := regs(io.readreg1)
+  //io.readdata2 := regs(io.readreg2)
+  io.readdata1 := Mux(io.readreg1 === 0.U, 0.U, regs(io.readreg1))
+  io.readdata2 := Mux(io.readreg2 === 0.U, 0.U, regs(io.readreg2))
 }

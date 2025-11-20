@@ -28,10 +28,10 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends Module {
   val (cycleCount, _) = Counter(true.B, 1 << 30)
 
   // To make the FIRRTL compiler happy. Remove this as you connect up the I/O's
-  control.io    := DontCare
-  immGen.io     := DontCare
-  branchCtrl.io := DontCare
-  branchAdd.io  := DontCare
+//  control.io    := DontCare
+//  immGen.io     := DontCare
+//  branchCtrl.io := DontCare
+//  branchAdd.io  := DontCare
 
   io.imem.address := pc
 
@@ -47,10 +47,23 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends Module {
   registers.io.writereg := writereg
   registers.io.wen :=  Mux(writereg === 0.U, false.B, true.B)
 
-  aluControl.io.add       := false.B
-  aluControl.io.immediate := false.B
+  immGen.io.instruction := instruction
+
+//  aluControl.io.add       := false.B
+//  aluControl.io.immediate := false.B
+  aluControl.io.add       := control.io.add
+  aluControl.io.immediate := control.io.immediate
   aluControl.io.funct7    := instruction(31,25)
   aluControl.io.funct3    := instruction(14,12)
+
+  val aluInputX = MuxLookup(control.io.alusrc1, 0.U, Array(
+    0.U -> registers.io.readdata1,
+    1.U -> 0.U,
+    2.U -> pc
+  ))
+
+  // inputy: immediate or reg2
+  val aluInputY = Mux(control.io.immediate, immGen.io.sextImm, registers.io.readdata2)
 
   alu.io.operation := aluControl.io.operation
   alu.io.inputx := registers.io.readdata1
@@ -76,8 +89,8 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends Module {
   branchCtrl.io.inputy := registers.io.readdata2
 
   //pc := pcPlusFour.io.result
-  pcPlusFour.io.inputx := pc
-  pcPlusFour.io.inputy := 4.U
+//  pcPlusFour.io.inputx := pc
+//  pcPlusFour.io.inputy := 4.U
 
   // Branch Target = PC + Immediate
   branchAdd.io.inputx := pc
