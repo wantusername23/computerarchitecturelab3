@@ -25,6 +25,16 @@ class BranchControl extends Module {
     val taken  = Output(Bool())
   })
   io.taken := DontCare
+  when (io.branch) {
+    switch(io.funct3) {
+      is("b000".U) { io.taken := io.inputx === io.inputy }              // beq
+      is("b001".U) { io.taken := io.inputx =/= io.inputy }              // bne
+      is("b100".U) { io.taken := io.inputx.asSInt < io.inputy.asSInt }  // blt
+      is("b101".U) { io.taken := io.inputx.asSInt >= io.inputy.asSInt } // bge
+      is("b110".U) { io.taken := io.inputx < io.inputy }                // bltu
+      is("b111".U) { io.taken := io.inputx >= io.inputy }               // bgeu
+    }
+  }
 
 
 }

@@ -56,9 +56,53 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends Module {
   alu.io.inputx := registers.io.readdata1
   alu.io.inputy := registers.io.readdata2
 
+  io.dmem.address   := alu.io.result
+  io.dmem.writedata := registers.io.readdata2
+  io.dmem.memread   := control.io.memread
+  io.dmem.memwrite  := control.io.memwrite
+  io.dmem.maskmode  := instruction(13, 12)
+  io.dmem.sext      := !instruction(14)
+  val writeData = MuxLookup(control.io.toreg, 0.U, Array(
+    0.U -> alu.io.result,
+    1.U -> io.dmem.readdata,
+    2.U -> pcPlusFour.io.result
+  ))
+
   registers.io.writedata := alu.io.result
 
-  pc := pcPlusFour.io.result
+  branchCtrl.io.branch := control.io.branch
+  branchCtrl.io.funct3 := instruction(14, 12)
+  branchCtrl.io.inputx := registers.io.readdata1
+  branchCtrl.io.inputy := registers.io.readdata2
+
+  //pc := pcPlusFour.io.result
+  pcPlusFour.io.inputx := pc
+  pcPlusFour.io.inputy := 4.U
+
+  // Branch Target = PC + Immediate
+  branchAdd.io.inputx := pc
+  branchAdd.io.inputy := immGen.io.sextImm
+  val pcPlusImm = branchAdd.io.result
+
+  // Next PC Selection
+  val next_pc = Wire(UInt(32.W))
+
+  when (control.io.jump === 3.U) { // JALR
+    // PC = (rs1 + imm) & ~1
+    next_pc := (registers.io.readdata1 + immGen.io.sextImm) & ~1.U(32.W)
+  } .elsewhen (control.io.jump === 2.U) { // JAL
+    // PC = PC + imm
+    next_pc := pcPlusImm
+  } .elsewhen (branchCtrl.io.taken) { // Branch Taken
+    // PC = PC + imm
+    next_pc := pcPlusImm
+  } .otherwise {
+    // PC = PC + 4
+    next_pc := pcPlusFour.io.result
+  }
+
+  pc := next_pc
+
 
   // Debug / pipeline viewer
   val structures = List(
