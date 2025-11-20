@@ -40,6 +40,8 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends Module {
 
   val instruction = io.imem.instruction
 
+  control.io.opcode := instruction(6, 0)
+
   registers.io.readreg1 := instruction(19,15)
   registers.io.readreg2 := instruction(24,20)
 
